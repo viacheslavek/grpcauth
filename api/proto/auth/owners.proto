@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "itstech.auth.v1;authv1";
+
+
+service OwnerController {
+  rpc CreateOwner (CreateOwnerRequest) returns (Response);
+  rpc UpdateOwner (UpdateOwnerRequest) returns (Response);
+  rpc DeleteOwner (DeleteOwnerRequest) returns (Response);
+  rpc GetOwner    (GetOwnerRequest) returns (Owner);
+
+  rpc LoginOwner (LoginOwnerRequest) returns (LoginResponse);
+}
+
+
+message CreateOwnerRequest {
+  string email = 1;
+  string login = 2;
+  string password = 3;
+}
+
+message UpdateOwnerRequest {
+  int64 id = 1;
+  string email = 2;
+  string login = 3;
+  string password = 4;
+
+}
+
+message DeleteOwnerRequest {
+  int64 id = 1;
+  string login = 2;
+}
+
+message GetOwnerRequest {
+  int64 id = 1;
+  string login = 2;
+}
+
+message LoginOwnerRequest {
+  string login = 1;
+  string password = 2;
+  int32 app_id = 3;
+}
+
+
+message Owner {
+  int64 id = 1;
+  string email = 2;
+  string login = 3;
+  string password = 4;
+}
+
+message Response {
+  int32 code = 1;
+  string message = 2;
+}
+
+message LoginResponse {
+  int32 code = 1;
+  string token = 2;
+}
+
+
+
