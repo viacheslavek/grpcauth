@@ -1,3 +1,3 @@
-module github.com/viacheslavek/gprcauth/api
+module github.com/viacheslavek/grpcauth/api
 
 go 1.22
