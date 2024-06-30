@@ -2,12 +2,13 @@ package auth
 
 import (
 	"context"
+	authv1 "github.com/viacheslavek/grpcauth/api/gen/go/auth"
+	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
+	"github.com/viacheslavek/grpcauth/auth/internal/lib/logger/sl"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	authv1 "github.com/viacheslavek/grpcauth/api/gen/go/auth"
-	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
+	"log/slog"
 )
 
 type Auth interface {
@@ -22,10 +23,11 @@ type Auth interface {
 type serverAPI struct {
 	authv1.UnimplementedOwnerControllerServer
 	auth Auth
+	lg   *slog.Logger
 }
 
-func Register(gRPC *grpc.Server, auth Auth) {
-	authv1.RegisterOwnerControllerServer(gRPC, &serverAPI{auth: auth})
+func Register(gRPC *grpc.Server, auth Auth, lg *slog.Logger) {
+	authv1.RegisterOwnerControllerServer(gRPC, &serverAPI{auth: auth, lg: lg})
 }
 
 const emptyId = 0
@@ -55,6 +57,10 @@ func (s *serverAPI) CreateOwner(
 			models.WithPassword(req.GetPassword()),
 		),
 	); err != nil {
+		s.lg.With(
+			slog.String("op", "auth.CreateOwner"),
+		).Error("failed to create owner", sl.Err(err))
+
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -95,6 +101,10 @@ func (s *serverAPI) UpdateOwner(
 			models.WithPassword(req.GetPassword()),
 		),
 	); err != nil {
+		s.lg.With(
+			slog.String("op", "auth.UpdateOwner"),
+		).Error("failed to update owner", sl.Err(err))
+
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -116,6 +126,10 @@ func (s *serverAPI) DeleteOwner(
 			models.WithLogin(req.GetLogin()),
 		),
 	); err != nil {
+		s.lg.With(
+			slog.String("op", "auth.DeleteOwner"),
+		).Error("failed to delete owner", sl.Err(err))
+
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -138,6 +152,10 @@ func (s *serverAPI) GetOwner(
 		),
 	)
 	if err != nil {
+		s.lg.With(
+			slog.String("op", "auth.GetOwner"),
+		).Error("failed to get owner", sl.Err(err))
+
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -162,6 +180,10 @@ func (s *serverAPI) LoginOwner(
 		),
 		int(req.GetAppId()))
 	if err != nil {
+		s.lg.With(
+			slog.String("op", "auth.LoginOwner"),
+		).Error("failed to login owner", sl.Err(err))
+
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 

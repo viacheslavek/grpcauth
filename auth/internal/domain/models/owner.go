@@ -8,6 +8,11 @@ type Owner struct {
 	PassHash []byte
 }
 
+type OwnerKey struct {
+	Id    int64
+	Login string
+}
+
 // Option is a function that configures an Owner
 type Option func(*Owner)
 
