@@ -9,6 +9,7 @@ import (
 
 	"github.com/viacheslavek/grpcauth/auth/internal/app/grpcapp"
 	"github.com/viacheslavek/grpcauth/auth/internal/config"
+	"github.com/viacheslavek/grpcauth/auth/internal/services/auth"
 )
 
 type App struct {
@@ -19,9 +20,9 @@ type App struct {
 func New(log *slog.Logger, grpcPort int, database config.StorageConfig, tokenTTL time.Duration) *App {
 	// TODO: создаю storage
 
-	// TODO: сервисный слой
+	authService := auth.New(log, tokenTTL)
 
-	grpcApp := grpcapp.New(log, grpcPort)
+	grpcApp := grpcapp.New(log, authService, grpcPort)
 
 	return &App{
 		GRPCServer: grpcApp,
