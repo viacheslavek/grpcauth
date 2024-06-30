@@ -12,9 +12,10 @@ import (
 const defaultConfigPath = "config/local.yaml"
 
 type Config struct {
-	Env  string        `yaml:"env"`
-	DB   StorageConfig `yaml:"storage"`
-	GRPC GRPCConfig    `yaml:"grpc"`
+	Env      string        `yaml:"env"`
+	DB       StorageConfig `yaml:"storage"`
+	GRPC     GRPCConfig    `yaml:"grpc"`
+	TokenTTL time.Duration `yaml:"token_ttl" env-default:"1h"`
 }
 
 type StorageConfig struct {
