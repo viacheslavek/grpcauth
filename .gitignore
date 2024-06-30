@@ -9,6 +9,11 @@
 .idea/**/dictionaries
 .idea/**/shelf
 
+.idea/.gitignore
+.idea/grpcauth.iml
+.idea/modules.xml
+.idea/vcs.xml
+
 # AWS User-specific
 .idea/**/aws.xml
 
@@ -99,4 +104,7 @@ fabric.properties
 
 # Go workspace file
 go.work
+
+/auth/.env
+/auth/go.sum
 
