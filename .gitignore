@@ -108,3 +108,4 @@ go.work
 /auth/.env
 /auth/go.sum
 
+/api/go.sum

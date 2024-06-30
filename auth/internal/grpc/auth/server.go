@@ -2,8 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,7 +30,7 @@ func Register(gRPC *grpc.Server, auth Auth) {
 
 const emptyId = 0
 
-// CreateOwner TODO comment
+// CreateOwner Creates a user in the table by email, login, and password
 func (s *serverAPI) CreateOwner(
 	ctx context.Context, req *authv1.CreateOwnerRequest,
 ) (*authv1.Response, error) {
@@ -49,15 +47,21 @@ func (s *serverAPI) CreateOwner(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// TODO: правлю models.NewOwner()
-	if err := s.auth.CreateOwner(ctx, models.NewOwner()); err != nil {
+	if err := s.auth.CreateOwner(
+		ctx,
+		*models.NewOwner(
+			models.WithEmail(req.GetEmail()),
+			models.WithLogin(req.GetLogin()),
+			models.WithPassword(req.GetPassword()),
+		),
+	); err != nil {
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
 	return &authv1.Response{Code: int32(codes.OK), Message: "Success create owner"}, nil
 }
 
-// UpdateOwner TODO comment
+// UpdateOwner Updates the user's login, email, or password in the table by ID
 func (s *serverAPI) UpdateOwner(
 	ctx context.Context, req *authv1.UpdateOwnerRequest,
 ) (*authv1.Response, error) {
@@ -82,15 +86,22 @@ func (s *serverAPI) UpdateOwner(
 		return nil, status.Error(codes.InvalidArgument, validatePassword(req.GetPassword()).Error())
 	}
 
-	// TODO: правлю models.NewOwner()
-	if err := s.auth.UpdateOwner(ctx, models.NewOwner()); err != nil {
+	if err := s.auth.UpdateOwner(
+		ctx,
+		*models.NewOwner(
+			models.WithId(req.GetId()),
+			models.WithEmail(req.GetEmail()),
+			models.WithLogin(req.GetLogin()),
+			models.WithPassword(req.GetPassword()),
+		),
+	); err != nil {
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
 	return &authv1.Response{Code: int32(codes.OK), Message: "Success update owner"}, nil
 }
 
-// DeleteOwner TODO comment
+// DeleteOwner Deletes a user from the table by ID or login
 func (s *serverAPI) DeleteOwner(
 	ctx context.Context, req *authv1.DeleteOwnerRequest,
 ) (*authv1.Response, error) {
@@ -98,15 +109,20 @@ func (s *serverAPI) DeleteOwner(
 		return nil, status.Error(codes.InvalidArgument, "empty delete parameters")
 	}
 
-	// TODO: правлю models.NewOwner()
-	if err := s.auth.DeleteOwner(ctx, models.NewOwner()); err != nil {
+	if err := s.auth.DeleteOwner(
+		ctx,
+		*models.NewOwner(
+			models.WithId(req.GetId()),
+			models.WithLogin(req.GetLogin()),
+		),
+	); err != nil {
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
 	return &authv1.Response{Code: int32(codes.OK), Message: "Success delete owner"}, nil
 }
 
-// GetOwner TODO comment
+// GetOwner Retrieves a user from the table by ID or login
 func (s *serverAPI) GetOwner(
 	ctx context.Context, req *authv1.GetOwnerRequest,
 ) (*authv1.Owner, error) {
@@ -114,18 +130,23 @@ func (s *serverAPI) GetOwner(
 		return nil, status.Error(codes.InvalidArgument, "empty get parameters")
 	}
 
-	// TODO: правлю models.NewOwner()
-	owner, err := s.auth.GetOwner(ctx, models.NewOwner())
+	owner, err := s.auth.GetOwner(
+		ctx,
+		*models.NewOwner(
+			models.WithId(req.GetId()),
+			models.WithLogin(req.GetLogin()),
+		),
+	)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
-	// TODO: заполняю owner через owner
-	fmt.Println(owner)
-	return &authv1.Owner{}, nil
+	return &authv1.Owner{
+		Id: owner.Id, Email: owner.Email, Login: owner.Login, Password: string(owner.PassHash),
+	}, nil
 }
 
-// LoginOwner TODO comment
+// LoginOwner Issues a JWT token by login and password
 func (s *serverAPI) LoginOwner(
 	ctx context.Context, req *authv1.LoginOwnerRequest,
 ) (*authv1.LoginResponse, error) {
@@ -133,8 +154,13 @@ func (s *serverAPI) LoginOwner(
 		return nil, status.Error(codes.InvalidArgument, "empty login parameters")
 	}
 
-	// TODO: правлю models.NewOwner()
-	token, err := s.auth.LoginOwner(ctx, models.NewOwner(), int(req.GetAppId()))
+	token, err := s.auth.LoginOwner(
+		ctx,
+		*models.NewOwner(
+			models.WithLogin(req.GetLogin()),
+			models.WithPassword(req.GetPassword()),
+		),
+		int(req.GetAppId()))
 	if err != nil {
 		return nil, status.Error(codes.Internal, "internal error")
 	}

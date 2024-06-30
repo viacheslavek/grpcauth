@@ -32,5 +32,3 @@ func validateLogin(login string) error {
 		validation.Match(regexp.MustCompile("^[a-zA-Z0-9]+$")).Error("must be alphanumeric"),
 	)
 }
-
-// TODO: добавить тесты валидации
