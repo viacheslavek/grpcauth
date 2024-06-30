@@ -10,8 +10,11 @@ func main() {
 	cfg := config.MustLoad()
 	lg := logger.SetupLogger(cfg.Env)
 
-	// TODO: после реализации бизнес логики буду передавать конфиг бд
-	application := app.New(lg, cfg.GRPC.Port, cfg.DB.Type, cfg.TokenTTL)
+	application := app.New(lg, cfg.GRPC.Port, cfg.DB, cfg.TokenTTL)
 
-	application.GRPCServer.MustRun()
+	go func() {
+		application.GRPCServer.MustRun()
+	}()
+
+	application.GracefulStop()
 }
