@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -10,6 +11,7 @@ import (
 	"github.com/viacheslavek/grpcauth/auth/internal/app/grpcapp"
 	"github.com/viacheslavek/grpcauth/auth/internal/config"
 	"github.com/viacheslavek/grpcauth/auth/internal/services/auth"
+	"github.com/viacheslavek/grpcauth/auth/internal/storage/postgres"
 )
 
 type App struct {
@@ -17,10 +19,22 @@ type App struct {
 	log        *slog.Logger
 }
 
-func New(log *slog.Logger, grpcPort int, database config.StorageConfig, tokenTTL time.Duration) *App {
-	// TODO: создаю storage
+func New(
+	ctx context.Context, log *slog.Logger,
+	grpcPort int, database config.StorageConfig, tokenTTL time.Duration,
+) *App {
+	db, errN := postgres.New(ctx, log, database)
+	if errN != nil {
+		log.Error("failed to init database")
+		panic(errN)
+	}
 
-	authService := auth.New(log, tokenTTL)
+	if err := db.Ping(); err != nil {
+		log.Error("failed to ping database")
+		panic(err)
+	}
+
+	authService := auth.New(log, db, db, db, tokenTTL)
 
 	grpcApp := grpcapp.New(log, authService, grpcPort)
 
