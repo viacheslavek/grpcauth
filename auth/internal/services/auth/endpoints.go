@@ -23,9 +23,9 @@ func (a Auth) CreateOwner(ctx context.Context, owner models.Owner) error {
 
 	log.Info("create owner")
 
-	passwordHash, errGPH := bcrypt.GenerateFromPassword([]byte(owner.Password), bcrypt.DefaultCost)
+	passwordHash, errGPH := getPasswordHash(owner.Password)
 	if errGPH != nil {
-		return fmt.Errorf("failed to get password hash %w", errGPH)
+		return errGPH
 	}
 	owner.PassHash = passwordHash
 
@@ -50,6 +50,14 @@ func (a Auth) UpdateOwner(ctx context.Context, owner models.Owner) error {
 	)
 
 	log.Info("update owner")
+
+	if owner.Password != "" {
+		passwordHash, errGPH := getPasswordHash(owner.Password)
+		if errGPH != nil {
+			return errGPH
+		}
+		owner.PassHash = passwordHash
+	}
 
 	if err := a.ownerProvider.UpdateOwner(ctx, owner); err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
@@ -156,4 +164,12 @@ func (a Auth) LoginOwner(ctx context.Context, owner models.Owner, appId int) (to
 	}
 
 	return token, nil
+}
+
+func getPasswordHash(password string) ([]byte, error) {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to get password hash %w", err)
+	}
+	return passwordHash, nil
 }
