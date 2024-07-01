@@ -2,9 +2,12 @@ package auth
 
 import (
 	"context"
+	"errors"
 	authv1 "github.com/viacheslavek/grpcauth/api/gen/go/auth"
 	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
 	"github.com/viacheslavek/grpcauth/auth/internal/lib/logger/sl"
+	"github.com/viacheslavek/grpcauth/auth/internal/services/auth"
+	"github.com/viacheslavek/grpcauth/auth/internal/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -61,6 +64,10 @@ func (s *serverAPI) CreateOwner(
 			slog.String("op", "auth.CreateOwner"),
 		).Error("failed to create owner", sl.Err(err))
 
+		if errors.Is(err, storage.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "user already exists")
+		}
+
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -105,6 +112,10 @@ func (s *serverAPI) UpdateOwner(
 			slog.String("op", "auth.UpdateOwner"),
 		).Error("failed to update owner", sl.Err(err))
 
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid id")
+		}
+
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -129,6 +140,10 @@ func (s *serverAPI) DeleteOwner(
 		s.lg.With(
 			slog.String("op", "auth.DeleteOwner"),
 		).Error("failed to delete owner", sl.Err(err))
+
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid login or id")
+		}
 
 		return nil, status.Error(codes.Internal, "internal error")
 	}
@@ -155,6 +170,10 @@ func (s *serverAPI) GetOwner(
 		s.lg.With(
 			slog.String("op", "auth.GetOwner"),
 		).Error("failed to get owner", sl.Err(err))
+
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid login or id")
+		}
 
 		return nil, status.Error(codes.Internal, "internal error")
 	}
@@ -183,6 +202,14 @@ func (s *serverAPI) LoginOwner(
 		s.lg.With(
 			slog.String("op", "auth.LoginOwner"),
 		).Error("failed to login owner", sl.Err(err))
+
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
+		}
+
+		if errors.Is(err, auth.ErrInvalidApp) {
+			return nil, status.Error(codes.InvalidArgument, "invalid app id")
+		}
 
 		return nil, status.Error(codes.Internal, "internal error")
 	}

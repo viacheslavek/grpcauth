@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -27,8 +28,14 @@ type OwnerProvider interface {
 }
 
 type AppProvider interface {
-	GetApp(ctx context.Context, appId int) models.App
+	GetApp(ctx context.Context, appId int) (models.App, error)
 }
+
+var (
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserExist          = errors.New("user already exist")
+	ErrInvalidApp         = errors.New("invalid app")
+)
 
 func New(
 	log *slog.Logger,
