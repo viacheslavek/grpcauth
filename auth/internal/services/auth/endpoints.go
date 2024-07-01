@@ -23,15 +23,15 @@ func (a Auth) CreateOwner(ctx context.Context, owner models.Owner) error {
 
 	log.Info("create owner")
 
-	passwordHash, errGPH := bcrypt.GenerateFromPassword([]byte(owner.Password), bcrypt.DefaultCost)
+	passwordHash, errGPH := getPasswordHash(owner.Password)
 	if errGPH != nil {
-		return fmt.Errorf("failed to get password hash %w", errGPH)
+		return errGPH
 	}
 	owner.PassHash = passwordHash
 
 	if err := a.ownerSaver.SaveOwner(ctx, owner); err != nil {
-		if errors.Is(err, storage.ErrUserExists) {
-			return fmt.Errorf("%s: %w", op, ErrUserExist)
+		if errors.Is(err, storage.ErrOwnerExists) {
+			return fmt.Errorf("%s: %w", op, storage.ErrOwnerExists)
 		}
 		return fmt.Errorf("failed to save owner %w", err)
 	}
@@ -51,8 +51,16 @@ func (a Auth) UpdateOwner(ctx context.Context, owner models.Owner) error {
 
 	log.Info("update owner")
 
+	if owner.Password != "" {
+		passwordHash, errGPH := getPasswordHash(owner.Password)
+		if errGPH != nil {
+			return errGPH
+		}
+		owner.PassHash = passwordHash
+	}
+
 	if err := a.ownerProvider.UpdateOwner(ctx, owner); err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
+		if errors.Is(err, storage.ErrOwnerNotFound) {
 			return fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 
@@ -77,7 +85,7 @@ func (a Auth) DeleteOwner(ctx context.Context, owner models.Owner) error {
 
 	ownerKey := models.OwnerKey{Id: owner.Id, Login: owner.Login}
 	if err := a.ownerProvider.DeleteOwner(ctx, ownerKey); err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
+		if errors.Is(err, storage.ErrOwnerNotFound) {
 			return fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 
@@ -103,7 +111,7 @@ func (a Auth) GetOwner(ctx context.Context, owner models.Owner) (models.Owner, e
 	ownerKey := models.OwnerKey{Id: owner.Id, Login: owner.Login}
 	newOwner, errGO := a.ownerProvider.GetOwner(ctx, ownerKey)
 	if errGO != nil {
-		if errors.Is(errGO, storage.ErrUserNotFound) {
+		if errors.Is(errGO, storage.ErrOwnerNotFound) {
 			return models.Owner{}, fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 
@@ -128,7 +136,7 @@ func (a Auth) LoginOwner(ctx context.Context, owner models.Owner, appId int) (to
 	ownerKey := models.OwnerKey{Id: owner.Id, Login: owner.Login}
 	dbOwner, errGO := a.ownerProvider.GetOwner(ctx, ownerKey)
 	if errGO != nil {
-		if errors.Is(errGO, storage.ErrUserNotFound) {
+		if errors.Is(errGO, storage.ErrOwnerNotFound) {
 			return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 
@@ -156,4 +164,12 @@ func (a Auth) LoginOwner(ctx context.Context, owner models.Owner, appId int) (to
 	}
 
 	return token, nil
+}
+
+func getPasswordHash(password string) ([]byte, error) {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to get password hash %w", err)
+	}
+	return passwordHash, nil
 }

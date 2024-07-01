@@ -1,9 +1,9 @@
 env: "local"
 storage:
   type: "postgres"
-  db-name: "name"
-  user: "user"
-  password: "password"
+  db-name: "test_db"
+  user: "slava"
+  password: ""
   host: "localhost"
   port: 5432
 grpc:
