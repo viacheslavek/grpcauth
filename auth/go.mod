@@ -8,7 +8,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1
-	github.com/viacheslavek/grpcauth/api v0.0.0-20240629193107-922296b12a4c
+	github.com/viacheslavek/grpcauth/api v0.0.0-20240701125853-8d5031d4f6ac
 	golang.org/x/crypto v0.24.0
 	google.golang.org/grpc v1.64.0
 )

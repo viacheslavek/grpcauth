@@ -3,15 +3,17 @@ package auth
 import (
 	"context"
 	"errors"
+	"log/slog"
+
 	authv1 "github.com/viacheslavek/grpcauth/api/gen/go/auth"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
 	"github.com/viacheslavek/grpcauth/auth/internal/lib/logger/sl"
 	"github.com/viacheslavek/grpcauth/auth/internal/services/auth"
 	"github.com/viacheslavek/grpcauth/auth/internal/storage"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"log/slog"
 )
 
 type Auth interface {
@@ -71,7 +73,7 @@ func (s *serverAPI) CreateOwner(
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
-	return &authv1.Response{Code: int32(codes.OK), Message: "Success create owner"}, nil
+	return &authv1.Response{Message: "Success create owner"}, nil
 }
 
 // UpdateOwner Updates the user's login, email, or password in the table by ID
@@ -119,7 +121,7 @@ func (s *serverAPI) UpdateOwner(
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
-	return &authv1.Response{Code: int32(codes.OK), Message: "Success update owner"}, nil
+	return &authv1.Response{Message: "Success update owner"}, nil
 }
 
 // DeleteOwner Deletes a user from the table by ID or login
@@ -148,7 +150,7 @@ func (s *serverAPI) DeleteOwner(
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
-	return &authv1.Response{Code: int32(codes.OK), Message: "Success delete owner"}, nil
+	return &authv1.Response{Message: "Success delete owner"}, nil
 }
 
 // GetOwner Retrieves a user from the table by ID or login
@@ -179,7 +181,7 @@ func (s *serverAPI) GetOwner(
 	}
 
 	return &authv1.Owner{
-		Id: owner.Id, Email: owner.Email, Login: owner.Login, Password: string(owner.PassHash),
+		Id: owner.Id, Email: owner.Email, Login: owner.Login, PasswordHash: string(owner.PassHash),
 	}, nil
 }
 
@@ -214,5 +216,5 @@ func (s *serverAPI) LoginOwner(
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
-	return &authv1.LoginResponse{Code: int32(codes.OK), Token: token}, nil
+	return &authv1.LoginResponse{Token: token}, nil
 }

@@ -6,9 +6,6 @@ import (
 	"github.com/viacheslavek/grpcauth/auth/internal/lib/logger"
 )
 
-// TODO: В proto вместо password надо хранить и отдавать passwordHash - исправить
-// и убрать из ответа code - не нужен
-
 func main() {
 	cfg := config.MustLoad()
 	lg := logger.SetupLogger(cfg.Env)
