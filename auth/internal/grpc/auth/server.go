@@ -66,7 +66,7 @@ func (s *serverAPI) CreateOwner(
 			slog.String("op", "auth.CreateOwner"),
 		).Error("failed to create owner", sl.Err(err))
 
-		if errors.Is(err, storage.ErrUserExists) {
+		if errors.Is(err, storage.ErrOwnerExists) {
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
 		}
 

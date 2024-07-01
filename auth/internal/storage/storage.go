@@ -3,7 +3,7 @@ package storage
 import "errors"
 
 var (
-	ErrUserExists   = errors.New("user already exists")
-	ErrUserNotFound = errors.New("user not found")
-	ErrAppNotFound  = errors.New("app not found")
+	ErrOwnerExists   = errors.New("owner already exists")
+	ErrOwnerNotFound = errors.New("owner not found")
+	ErrAppNotFound   = errors.New("app not found")
 )

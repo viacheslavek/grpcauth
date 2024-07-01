@@ -33,7 +33,6 @@ type AppProvider interface {
 
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrUserExist          = errors.New("user already exist")
 	ErrInvalidApp         = errors.New("invalid app")
 )
 
