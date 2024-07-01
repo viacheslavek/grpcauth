@@ -7,6 +7,7 @@ import (
 )
 
 // TODO: В proto вместо password надо хранить и отдавать passwordHash - исправить
+// и убрать из ответа code - не нужен
 
 func main() {
 	cfg := config.MustLoad()

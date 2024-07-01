@@ -2,76 +2,53 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
 )
 
-// TODO: потом реализовать интерфейсы для Storage
-
 type Auth struct {
-	log *slog.Logger
-	//ownerSaver    OwnerSaver
-	//ownerProvider OwnerProvider
-	//appProvider   AppProvider
-	tokenTTL time.Duration
+	log           *slog.Logger
+	ownerSaver    OwnerSaver
+	ownerProvider OwnerProvider
+	appProvider   AppProvider
+	tokenTTL      time.Duration
 }
 
-//// OwnerSaver TODO: допилить
-//type OwnerSaver interface {
-//	SaveOwner()
-//}
-//
-//// OwnerProvider TODO: допилить
-//type OwnerProvider interface {
-//	GetOwner()
-//	UpdateOwner()
-//	DeleteOwner()
-//}
-//
-//// AppProvider TODO: допилить
-//type AppProvider interface {
-//	GetApp()
-//}
+type OwnerSaver interface {
+	SaveOwner(ctx context.Context, owner models.Owner) error
+}
+
+type OwnerProvider interface {
+	GetOwner(ctx context.Context, key models.OwnerKey) (models.Owner, error)
+	UpdateOwner(ctx context.Context, owner models.Owner) error
+	DeleteOwner(ctx context.Context, key models.OwnerKey) error
+}
+
+type AppProvider interface {
+	GetApp(ctx context.Context, appId int) (models.App, error)
+}
+
+var (
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserExist          = errors.New("user already exist")
+	ErrInvalidApp         = errors.New("invalid app")
+)
 
 func New(
 	log *slog.Logger,
-	//ownerSaver OwnerSaver,
-	//ownerProvider OwnerProvider,
-	//appProvider AppProvider,
+	ownerSaver OwnerSaver,
+	ownerProvider OwnerProvider,
+	appProvider AppProvider,
 	tokenTTL time.Duration,
 ) *Auth {
 	return &Auth{
-		log: log,
-		//ownerSaver:    ownerSaver,
-		//ownerProvider: ownerProvider,
-		//appProvider:   appProvider,
-		tokenTTL: tokenTTL,
+		log:           log,
+		ownerSaver:    ownerSaver,
+		ownerProvider: ownerProvider,
+		appProvider:   appProvider,
+		tokenTTL:      tokenTTL,
 	}
-}
-
-func (a Auth) CreateOwner(ctx context.Context, owner models.Owner) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a Auth) UpdateOwner(ctx context.Context, owner models.Owner) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a Auth) DeleteOwner(ctx context.Context, owner models.Owner) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a Auth) GetOwner(ctx context.Context, owner models.Owner) (models.Owner, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a Auth) LoginOwner(ctx context.Context, owner models.Owner, appId int) (token string, err error) {
-	//TODO implement me
-	panic("implement me")
 }
