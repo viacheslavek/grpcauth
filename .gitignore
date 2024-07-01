@@ -13,6 +13,7 @@
 .idea/grpcauth.iml
 .idea/modules.xml
 .idea/vcs.xml
+.idea/dataSources.xml
 
 # AWS User-specific
 .idea/**/aws.xml
@@ -109,3 +110,5 @@ go.work
 /auth/go.sum
 
 /api/go.sum
+
+/auth/storage/data_volumes
