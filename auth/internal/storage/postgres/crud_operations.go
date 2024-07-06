@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"strings"
 
@@ -50,8 +51,7 @@ func (s *Storage) SaveOwner(ctx context.Context, owner models.Owner) error {
 	return nil
 }
 
-// TODO: делал достаточно второпях, надо будет найти узкие места и их улучшить
-// Например, можно ли дублировать меньше кода в update и лучше обрабатывать ошибки -> в техдолг
+// TODO: провести рефакторинг функций (вместе с переносом логики разделения в service слой)
 
 func (s *Storage) GetOwner(ctx context.Context, key models.OwnerKey) (models.Owner, error) {
 	if key.Id != 0 {
@@ -112,29 +112,38 @@ func (s *Storage) getOwnerByLogin(ctx context.Context, login string) (models.Own
 
 func (s *Storage) UpdateOwner(ctx context.Context, owner models.Owner) error {
 	setClauses := make([]string, 0)
+	args := make([]interface{}, 0)
+	argId := 1
 
 	if owner.Email != "" {
-		setClauses = append(setClauses, fmt.Sprintf("email=$%s", owner.Email))
+		setClauses = append(setClauses, fmt.Sprintf("email=$%d", argId))
+		args = append(args, owner.Email)
+		argId++
 	}
 	if owner.Login != "" {
-		setClauses = append(setClauses, fmt.Sprintf("login=$%s", owner.Login))
+		setClauses = append(setClauses, fmt.Sprintf("login=$%d", argId))
+		args = append(args, owner.Login)
+		argId++
 	}
 	if len(owner.PassHash) > 0 {
-		setClauses = append(setClauses, fmt.Sprintf("password_hash=$%s", owner.PassHash))
+		setClauses = append(setClauses, fmt.Sprintf("password_hash=$%d", argId))
+		args = append(args, owner.PassHash)
+		argId++
 	}
 
 	query := fmt.Sprintf(`
-		UPDATE owners 
-		SET %s
-		WHERE id=$%d
-	`, strings.Join(setClauses, ", "), owner.Id)
+        UPDATE owners 
+        SET %s
+        WHERE id=$%d
+    `, strings.Join(setClauses, ", "), argId)
+	args = append(args, owner.Id)
 
-	_, err := s.conn.Exec(ctx, query)
+	_, err := s.conn.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to update owner: %w", err)
 	}
 
-	s.log.Info("Owner updated successfully", slog.Int64("id", owner.Id))
+	log.Println("Owner updated successfully", "id", owner.Id)
 
 	return nil
 }
