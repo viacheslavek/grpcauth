@@ -209,10 +209,6 @@ func (s *serverAPI) LoginOwner(
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
 		}
 
-		if errors.Is(err, auth.ErrInvalidApp) {
-			return nil, status.Error(codes.InvalidArgument, "invalid app id")
-		}
-
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 

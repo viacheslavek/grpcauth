@@ -126,6 +126,9 @@ func (a Auth) GetOwner(ctx context.Context, owner models.Owner) (models.Owner, e
 func (a Auth) LoginOwner(ctx context.Context, owner models.Owner, appId int) (token string, err error) {
 	const op = "auth.LoginOwner"
 
+	// TODO: разобраться с нужности ручки loginOwner
+	fmt.Println("app id", appId)
+
 	log := a.log.With(
 		slog.String("op", op),
 		slog.String("login", owner.Login),
@@ -147,18 +150,9 @@ func (a Auth) LoginOwner(ctx context.Context, owner models.Owner, appId int) (to
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
-	app, errA := a.appProvider.GetApp(ctx, appId)
-	if errA != nil {
-		if errors.Is(errA, storage.ErrAppNotFound) {
-			return "", fmt.Errorf("%s: %w", op, ErrInvalidApp)
-		}
-
-		return "", fmt.Errorf("%s: failed get app %w", op, errGO)
-	}
-
 	log.Info("owner logged in successfully")
 
-	token, err = jwt.NewToken(owner, app, a.tokenTTL)
+	token, err = jwt.NewToken(owner, a.tokenTTL)
 	if err != nil {
 		return "", fmt.Errorf("%s: failed to generate token %w", op, err)
 	}

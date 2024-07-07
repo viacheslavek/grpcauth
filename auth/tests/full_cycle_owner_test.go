@@ -28,8 +28,6 @@ func TestFullCycleOwner_HappyPath(t *testing.T) {
 
 	ownerID := getOwnerAndCheckSuccess(s, t, login, email, password)
 
-	fmt.Println("id", ownerID)
-
 	newLogin := gofakeit.Username()
 	newEmail, errGVEN := generateValidEmail(1000)
 	assert.NoError(t, errGVEN, "email generate failed")

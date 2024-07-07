@@ -34,7 +34,7 @@ func New(
 		panic(err)
 	}
 
-	authService := auth.New(log, db, db, db, tokenTTL)
+	authService := auth.New(log, db, db, tokenTTL)
 
 	grpcApp := grpcapp.New(log, authService, grpcPort)
 
@@ -44,14 +44,15 @@ func New(
 	}
 }
 
-func (a *App) GracefulStop() {
+func (a *App) GracefulStop(cancel context.CancelFunc) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 	<-stop
 
 	a.GRPCServer.Stop()
 
-	// TODO: сделать Stop() для БД
+	a.log.Info("cancel context")
+	cancel()
 
 	a.log.Info("Gracefully stopped")
 }

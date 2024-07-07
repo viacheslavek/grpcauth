@@ -2,14 +2,15 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"log/slog"
 	"strings"
 
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
 	"github.com/viacheslavek/grpcauth/auth/internal/storage"
@@ -17,29 +18,20 @@ import (
 
 func (s *Storage) SaveOwner(ctx context.Context, owner models.Owner) error {
 	const op = "postgres.saveOwner"
-	var existingEmail, existingLogin sql.NullString
-	querySearch := `
-		SELECT email, login
-		FROM owners 
-		WHERE email=$1 OR login=$2
-    `
-	err := s.conn.QueryRow(ctx, querySearch, owner.Email, owner.Login).Scan(&existingEmail, &existingLogin)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("%s: failed to check email and login: %w", op, err)
-	}
-
-	if existingEmail.Valid && existingEmail.String == owner.Email ||
-		existingLogin.Valid && existingLogin.String == owner.Login {
-		return storage.ErrOwnerExists
-	}
 
 	queryInsert := `
 		INSERT INTO owners (email, login, password_hash)
 		VALUES ($1, $2, $3)
     `
 
-	_, err = s.conn.Exec(ctx, queryInsert, owner.Email, owner.Login, owner.PassHash)
+	_, err := s.conn.Exec(ctx, queryInsert, owner.Email, owner.Login, owner.PassHash)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				return fmt.Errorf("%s: failed to save owner: %w", op, storage.ErrOwnerExists)
+			}
+		}
 		return fmt.Errorf("%s: failed to save owner: %w", op, err)
 	}
 
@@ -72,7 +64,7 @@ func (s *Storage) getOwnerById(ctx context.Context, id int64) (models.Owner, err
 	err := s.conn.QueryRow(ctx, query, id).Scan(&owner.Id, &owner.Email, &owner.Login, &owner.PassHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Owner{}, fmt.Errorf("owner with id %d not found", id)
+			return models.Owner{}, fmt.Errorf("%w with id %d ", storage.ErrOwnerNotFound, id)
 		}
 		return models.Owner{}, fmt.Errorf("failed to get owner by id: %w", err)
 	}
@@ -96,7 +88,7 @@ func (s *Storage) getOwnerByLogin(ctx context.Context, login string) (models.Own
 	err := s.conn.QueryRow(ctx, query, login).Scan(&owner.Id, &owner.Email, &owner.Login, &owner.PassHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Owner{}, fmt.Errorf("owner with login %s not found", login)
+			return models.Owner{}, fmt.Errorf("%w with login %s", storage.ErrOwnerNotFound, login)
 		}
 		return models.Owner{}, fmt.Errorf("failed to get owner by login: %w", err)
 	}
