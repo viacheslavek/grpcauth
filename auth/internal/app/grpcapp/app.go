@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	authrpc "github.com/viacheslavek/grpcauth/auth/internal/grpc/auth"
+	authrpc "github.com/viacheslavek/grpcauth/auth/internal/grpc/ownerCtl"
 )
 
 type App struct {

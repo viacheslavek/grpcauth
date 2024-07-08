@@ -1,4 +1,4 @@
-package auth
+package ownerCtl
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
 	"github.com/viacheslavek/grpcauth/auth/internal/lib/logger/sl"
-	"github.com/viacheslavek/grpcauth/auth/internal/services/auth"
+	"github.com/viacheslavek/grpcauth/auth/internal/services/ownerCtl"
 	"github.com/viacheslavek/grpcauth/auth/internal/storage"
 )
 
@@ -114,7 +114,7 @@ func (s *serverAPI) UpdateOwner(
 			slog.String("op", "auth.UpdateOwner"),
 		).Error("failed to update owner", sl.Err(err))
 
-		if errors.Is(err, auth.ErrInvalidCredentials) {
+		if errors.Is(err, ownerCtl.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid id")
 		}
 
@@ -143,7 +143,7 @@ func (s *serverAPI) DeleteOwner(
 			slog.String("op", "auth.DeleteOwner"),
 		).Error("failed to delete owner", sl.Err(err))
 
-		if errors.Is(err, auth.ErrInvalidCredentials) {
+		if errors.Is(err, ownerCtl.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid login or id")
 		}
 
@@ -173,7 +173,7 @@ func (s *serverAPI) GetOwner(
 			slog.String("op", "auth.GetOwner"),
 		).Error("failed to get owner", sl.Err(err))
 
-		if errors.Is(err, auth.ErrInvalidCredentials) {
+		if errors.Is(err, ownerCtl.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid login or id")
 		}
 
@@ -205,7 +205,7 @@ func (s *serverAPI) LoginOwner(
 			slog.String("op", "auth.LoginOwner"),
 		).Error("failed to login owner", sl.Err(err))
 
-		if errors.Is(err, auth.ErrInvalidCredentials) {
+		if errors.Is(err, ownerCtl.ErrInvalidCredentials) {
 			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
 		}
 
