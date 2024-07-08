@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"strings"
 
@@ -24,7 +23,7 @@ func (s *Storage) SaveOwner(ctx context.Context, owner models.Owner) error {
 		VALUES ($1, $2, $3)
     `
 
-	_, err := s.conn.Exec(ctx, queryInsert, owner.Email, owner.Login, owner.PassHash)
+	_, err := s.pool.Exec(ctx, queryInsert, owner.Email, owner.Login, owner.PassHash)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -43,8 +42,6 @@ func (s *Storage) SaveOwner(ctx context.Context, owner models.Owner) error {
 	return nil
 }
 
-// TODO: провести рефакторинг функций (вместе с переносом логики разделения в service слой)
-
 func (s *Storage) GetOwner(ctx context.Context, key models.OwnerKey) (models.Owner, error) {
 	if key.Id != 0 {
 		return s.getOwnerById(ctx, key.Id)
@@ -61,7 +58,7 @@ func (s *Storage) getOwnerById(ctx context.Context, id int64) (models.Owner, err
 		FROM owners
 		WHERE id=$1
 	`
-	err := s.conn.QueryRow(ctx, query, id).Scan(&owner.Id, &owner.Email, &owner.Login, &owner.PassHash)
+	err := s.pool.QueryRow(ctx, query, id).Scan(&owner.Id, &owner.Email, &owner.Login, &owner.PassHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Owner{}, fmt.Errorf("%w with id %d ", storage.ErrOwnerNotFound, id)
@@ -85,7 +82,7 @@ func (s *Storage) getOwnerByLogin(ctx context.Context, login string) (models.Own
 		FROM owners WHERE
 		login=$1
 	`
-	err := s.conn.QueryRow(ctx, query, login).Scan(&owner.Id, &owner.Email, &owner.Login, &owner.PassHash)
+	err := s.pool.QueryRow(ctx, query, login).Scan(&owner.Id, &owner.Email, &owner.Login, &owner.PassHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.Owner{}, fmt.Errorf("%w with login %s", storage.ErrOwnerNotFound, login)
@@ -130,12 +127,16 @@ func (s *Storage) UpdateOwner(ctx context.Context, owner models.Owner) error {
     `, strings.Join(setClauses, ", "), argId)
 	args = append(args, owner.Id)
 
-	_, err := s.conn.Exec(ctx, query, args...)
+	result, err := s.pool.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to update owner: %w", err)
 	}
 
-	log.Println("Owner updated successfully", "id", owner.Id)
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("%w with id %d", storage.ErrOwnerNotFound, owner.Id)
+	}
+
+	s.log.Info("Owner updated successfully", "id", owner.Id)
 
 	return nil
 }
@@ -151,12 +152,12 @@ func (s *Storage) DeleteOwner(ctx context.Context, key models.OwnerKey) error {
 
 func (s *Storage) deleteOwnerById(ctx context.Context, id int64) error {
 	query := `DELETE FROM owners WHERE id=$1`
-	commandTag, err := s.conn.Exec(ctx, query, id)
+	commandTag, err := s.pool.Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete owner by id: %w", err)
 	}
 	if commandTag.RowsAffected() == 0 {
-		return fmt.Errorf("owner with id %d not found", id)
+		return fmt.Errorf("%w with id %d", storage.ErrOwnerNotFound, id)
 	}
 
 	s.log.Info("Owner deleted successfully by id", slog.Int64("id", id))
@@ -166,12 +167,12 @@ func (s *Storage) deleteOwnerById(ctx context.Context, id int64) error {
 
 func (s *Storage) deleteOwnerByLogin(ctx context.Context, login string) error {
 	query := `DELETE FROM owners WHERE login=$1`
-	commandTag, err := s.conn.Exec(ctx, query, login)
+	commandTag, err := s.pool.Exec(ctx, query, login)
 	if err != nil {
 		return fmt.Errorf("failed to delete owner by login: %w", err)
 	}
 	if commandTag.RowsAffected() == 0 {
-		return fmt.Errorf("owner with login %s not found", login)
+		return fmt.Errorf("%w with login %s", storage.ErrOwnerNotFound, login)
 	}
 
 	s.log.Info("Owner deleted successfully by login", slog.String("login", login))

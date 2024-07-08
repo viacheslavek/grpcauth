@@ -3,7 +3,11 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"github.com/viacheslavek/grpcauth/auth/internal/config"
 	"log"
+	"log/slog"
+	"net/url"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -12,13 +16,19 @@ import (
 )
 
 func main() {
+	dbCfg := config.MustLoad().DB
 
-	// TODO: очередной техдолг: надо брать путь до базы, пароль и тд как в парсинге конфига, но из
-	// флага или переменных окружения + добавить для этого валидацию, а пока так работает, пойду делать
-	// ручки бд
+	postgresURL := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(dbCfg.User, dbCfg.Password),
+		Host:   fmt.Sprintf("%s:%d", dbCfg.Host, dbCfg.Port),
+		Path:   dbCfg.DBName,
+	}
+
+	log.Println("current postgres url", slog.String("url", postgresURL.String()))
 
 	db, err := sql.Open("postgres",
-		"postgres://slava:password_from_env@localhost:5432/test_db?sslmode=disable")
+		postgresURL.String()+"?sslmode=disable")
 	if err != nil {
 		log.Fatalf("could not connect to the database: %v", err)
 	}

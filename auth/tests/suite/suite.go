@@ -2,9 +2,11 @@ package suite
 
 import (
 	"context"
+	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"net"
+	"os"
 	"strconv"
 	"testing"
 
@@ -22,13 +24,20 @@ type Suite struct {
 
 const (
 	grpcHost = "localhost"
+	testPath = "config/local.yaml"
 )
 
 func New(t *testing.T) *Suite {
 	t.Helper()
 	t.Parallel()
 
-	cfg := config.MustLoadPath("config/local.yaml")
+	dir, errG := os.Getwd()
+	if errG != nil {
+		t.Fatalf("work dir error: %v", errG)
+	}
+	fmt.Println("Current working directory:", dir)
+
+	cfg := config.MustLoadPath(testPath)
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.GRPC.Timeout)
 

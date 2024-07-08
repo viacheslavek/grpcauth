@@ -1,14 +1,14 @@
 package tests
 
 import (
-	"github.com/brianvoe/gofakeit/v6"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"testing"
 
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	authv1 "github.com/viacheslavek/grpcauth/api/gen/go/auth"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/viacheslavek/grpcauth/auth/tests/suite"
 )
@@ -44,9 +44,11 @@ func TestUpdateOwner_Failures(t *testing.T) {
 	s := suite.New(t)
 
 	// Try updating a non-existent owner
-	id := int64(99999) // Assume this ID does not exist
-	newLogin := "new_login"
-	newEmail := "new_email@example.com"
+	id := int64(999999)
+	newLogin := gofakeit.Username()
+	newEmail, errGVE := generateValidEmail(1000)
+	assert.NoError(t, errGVE, "email generate failed")
+
 	newPassword := generateValidPassword()
 
 	_, err := s.OwnerClient.UpdateOwner(s.Ctx, &authv1.UpdateOwnerRequest{
@@ -56,7 +58,9 @@ func TestUpdateOwner_Failures(t *testing.T) {
 		Password: newPassword,
 	})
 	require.Error(t, err, "expected error when updating non-existent owner")
-	assert.Contains(t, err.Error(), "owner not found", "expected owner not found error")
+	st, _ := status.FromError(err)
+	assert.Equal(t, codes.InvalidArgument, st.Code(), "expected status code InvalidArgument")
+	assert.Contains(t, st.Message(), "invalid id", "expected owner not found message")
 }
 
 func TestDeleteOwner_Failures(t *testing.T) {
@@ -70,7 +74,9 @@ func TestDeleteOwner_Failures(t *testing.T) {
 	})
 
 	require.Error(t, err, "expected error when deleting non-existent owner")
-	assert.Contains(t, err.Error(), "owner not found", "expected owner not found error")
+	st, _ := status.FromError(err)
+	assert.Equal(t, codes.InvalidArgument, st.Code(), "expected status code InvalidArgument")
+	assert.Contains(t, st.Message(), "invalid login or id", "expected owner not found message")
 }
 
 func TestGetOwner_Failures(t *testing.T) {
