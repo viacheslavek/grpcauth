@@ -1,4 +1,4 @@
-package auth
+package ownerCtl
 
 import (
 	"context"
@@ -9,11 +9,10 @@ import (
 	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
 )
 
-type Auth struct {
+type OwnerCtl struct {
 	log           *slog.Logger
 	ownerSaver    OwnerSaver
 	ownerProvider OwnerProvider
-	appProvider   AppProvider
 	tokenTTL      time.Duration
 }
 
@@ -27,27 +26,20 @@ type OwnerProvider interface {
 	DeleteOwner(ctx context.Context, key models.OwnerKey) error
 }
 
-type AppProvider interface {
-	GetApp(ctx context.Context, appId int) (models.App, error)
-}
-
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrInvalidApp         = errors.New("invalid app")
 )
 
 func New(
 	log *slog.Logger,
 	ownerSaver OwnerSaver,
 	ownerProvider OwnerProvider,
-	appProvider AppProvider,
 	tokenTTL time.Duration,
-) *Auth {
-	return &Auth{
+) *OwnerCtl {
+	return &OwnerCtl{
 		log:           log,
 		ownerSaver:    ownerSaver,
 		ownerProvider: ownerProvider,
-		appProvider:   appProvider,
 		tokenTTL:      tokenTTL,
 	}
 }

@@ -10,7 +10,7 @@ import (
 
 	"github.com/viacheslavek/grpcauth/auth/internal/app/grpcapp"
 	"github.com/viacheslavek/grpcauth/auth/internal/config"
-	"github.com/viacheslavek/grpcauth/auth/internal/services/auth"
+	"github.com/viacheslavek/grpcauth/auth/internal/services/ownerCtl"
 	"github.com/viacheslavek/grpcauth/auth/internal/storage/postgres"
 )
 
@@ -34,9 +34,9 @@ func New(
 		panic(err)
 	}
 
-	authService := auth.New(log, db, db, db, tokenTTL)
+	ownerService := ownerCtl.New(log, db, db, tokenTTL)
 
-	grpcApp := grpcapp.New(log, authService, grpcPort)
+	grpcApp := grpcapp.New(log, ownerService, grpcPort)
 
 	return &App{
 		GRPCServer: grpcApp,
@@ -44,14 +44,15 @@ func New(
 	}
 }
 
-func (a *App) GracefulStop() {
+func (a *App) GracefulStop(cancel context.CancelFunc) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 	<-stop
 
 	a.GRPCServer.Stop()
 
-	// TODO: сделать Stop() для БД
+	a.log.Info("cancel context")
+	cancel()
 
 	a.log.Info("Gracefully stopped")
 }

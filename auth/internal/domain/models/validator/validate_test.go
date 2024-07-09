@@ -1,6 +1,8 @@
-package auth
+package validator
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestValidateEmail(t *testing.T) {
 	tests := []struct {
@@ -13,7 +15,7 @@ func TestValidateEmail(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := validateEmail(test.email)
+		err := ValidateEmail(test.email)
 		if test.expectError && err == nil {
 			t.Errorf("Expected error for email: %s, but got none", test.email)
 		} else if !test.expectError && err != nil {
@@ -35,7 +37,7 @@ func TestValidatePassword(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := validatePassword(test.password)
+		err := ValidatePassword(test.password)
 		if test.expectError && err == nil {
 			t.Errorf("Expected error for password: %s, but got none", test.password)
 		} else if !test.expectError && err != nil {
@@ -56,7 +58,7 @@ func TestValidateLogin(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := validateLogin(test.login)
+		err := ValidateLogin(test.login)
 		if test.expectError && err == nil {
 			t.Errorf("Expected error for login: %s, but got none", test.login)
 		} else if !test.expectError && err != nil {

@@ -1,11 +1,20 @@
 package models
 
+import (
+	"fmt"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/viacheslavek/grpcauth/auth/internal/domain/models/validator"
+)
+
 type Owner struct {
-	Id       int64
-	Email    string
-	Login    string
-	Password string
-	PassHash []byte
+	id       int64
+	email    string
+	login    string
+	password string
+	passHash []byte
 }
 
 type OwnerKey struct {
@@ -13,42 +22,83 @@ type OwnerKey struct {
 	Login string
 }
 
-// Option is a function that configures an Owner
-type Option func(*Owner)
+const emptyId = 0
 
-// NewOwner creates a new Owner with the provided options
-func NewOwner(opts ...Option) *Owner {
-	owner := &Owner{}
-	for _, opt := range opts {
-		opt(owner)
+func (o *Owner) SetId(id int64) error {
+	if id == emptyId {
+		return validator.ErrEmptyParameter
 	}
-	return owner
+	if id < 0 {
+		return fmt.Errorf("id can't be less than zero, given %d", id)
+	}
+
+	o.id = id
+
+	return nil
 }
 
-// WithId sets the Id of the Owner
-func WithId(id int64) Option {
-	return func(o *Owner) {
-		o.Id = id
+func (o *Owner) SetLogin(login string) error {
+	if len(login) == 0 {
+		return validator.ErrEmptyParameter
 	}
+
+	if err := validator.ValidateLogin(login); err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	o.login = login
+
+	return nil
 }
 
-// WithEmail sets the Email of the Owner
-func WithEmail(email string) Option {
-	return func(o *Owner) {
-		o.Email = email
+func (o *Owner) SetEmail(email string) error {
+	if len(email) == 0 {
+		return validator.ErrEmptyParameter
 	}
+
+	if err := validator.ValidateEmail(email); err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	o.email = email
+
+	return nil
 }
 
-// WithLogin sets the Login of the Owner
-func WithLogin(login string) Option {
-	return func(o *Owner) {
-		o.Login = login
+func (o *Owner) SetPassword(password string) error {
+	if len(password) == 0 {
+		return validator.ErrEmptyParameter
 	}
+
+	if err := validator.ValidatePassword(password); err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	o.password = password
+
+	return nil
 }
 
-// WithPassword sets the Password of the Owner
-func WithPassword(password string) Option {
-	return func(o *Owner) {
-		o.Password = password
-	}
+func (o *Owner) SetPassHash(passHash []byte) {
+	o.passHash = passHash
+}
+
+func (o *Owner) Id() int64 {
+	return o.id
+}
+
+func (o *Owner) Login() string {
+	return o.login
+}
+
+func (o *Owner) Email() string {
+	return o.email
+}
+
+func (o *Owner) Password() string {
+	return o.password
+}
+
+func (o *Owner) PassHash() []byte {
+	return o.passHash
 }

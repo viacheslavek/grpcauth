@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	authrpc "github.com/viacheslavek/grpcauth/auth/internal/grpc/auth"
+	ownerrpc "github.com/viacheslavek/grpcauth/auth/internal/grpc/ownerCtl"
 )
 
 type App struct {
@@ -16,10 +16,10 @@ type App struct {
 	port       int
 }
 
-func New(log *slog.Logger, authService authrpc.Auth, port int) *App {
+func New(log *slog.Logger, ownerService ownerrpc.OwnerCtl, port int) *App {
 	gRPCServer := grpc.NewServer()
 
-	authrpc.Register(gRPCServer, authService, log)
+	ownerrpc.Register(gRPCServer, ownerService, log)
 
 	return &App{
 		log:        log,

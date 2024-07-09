@@ -11,7 +11,7 @@ import (
 func main() {
 	cfg := config.MustLoad()
 	lg := logger.SetupLogger(cfg.Env)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	application := app.New(ctx, lg, cfg.GRPC.Port, cfg.DB, cfg.TokenTTL)
 
@@ -19,5 +19,5 @@ func main() {
 		application.GRPCServer.MustRun()
 	}()
 
-	application.GracefulStop()
+	application.GracefulStop(cancel)
 }
