@@ -9,7 +9,7 @@ import (
 	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
 )
 
-type Auth struct {
+type OwnerCtl struct {
 	log           *slog.Logger
 	ownerSaver    OwnerSaver
 	ownerProvider OwnerProvider
@@ -35,8 +35,8 @@ func New(
 	ownerSaver OwnerSaver,
 	ownerProvider OwnerProvider,
 	tokenTTL time.Duration,
-) *Auth {
-	return &Auth{
+) *OwnerCtl {
+	return &OwnerCtl{
 		log:           log,
 		ownerSaver:    ownerSaver,
 		ownerProvider: ownerProvider,

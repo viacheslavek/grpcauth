@@ -23,7 +23,7 @@ func (s *Storage) SaveOwner(ctx context.Context, owner models.Owner) error {
 		VALUES ($1, $2, $3)
     `
 
-	_, err := s.pool.Exec(ctx, queryInsert, owner.Email, owner.Login, owner.PassHash)
+	_, err := s.pool.Exec(ctx, queryInsert, owner.Email(), owner.Login(), owner.PassHash())
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -35,8 +35,8 @@ func (s *Storage) SaveOwner(ctx context.Context, owner models.Owner) error {
 	}
 
 	s.log.Info("Owner created successfully",
-		slog.String("email", owner.Email),
-		slog.String("login", owner.Login),
+		slog.String("email", owner.Email()),
+		slog.String("login", owner.Login()),
 	)
 
 	return nil
@@ -51,49 +51,66 @@ func (s *Storage) GetOwner(ctx context.Context, key models.OwnerKey) (models.Own
 	return models.Owner{}, fmt.Errorf("unattainable error: either id or login must be provided")
 }
 
-func (s *Storage) getOwnerById(ctx context.Context, id int64) (models.Owner, error) {
+func (s *Storage) getOwnerById(ctx context.Context, searchId int64) (models.Owner, error) {
 	var owner models.Owner
 	query := `
 		SELECT id, email, login, password_hash 
 		FROM owners
 		WHERE id=$1
 	`
-	err := s.pool.QueryRow(ctx, query, id).Scan(&owner.Id, &owner.Email, &owner.Login, &owner.PassHash)
+	var id int64
+	var email, newLogin string
+	var passHash []byte
+
+	err := s.pool.QueryRow(ctx, query, searchId).Scan(&id, &email, &newLogin, &passHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Owner{}, fmt.Errorf("%w with id %d ", storage.ErrOwnerNotFound, id)
+			return models.Owner{}, fmt.Errorf("%w with id %d ", storage.ErrOwnerNotFound, searchId)
 		}
 		return models.Owner{}, fmt.Errorf("failed to get owner by id: %w", err)
 	}
+	_ = owner.SetId(id)
+	_ = owner.SetEmail(email)
+	_ = owner.SetLogin(newLogin)
+	owner.SetPassHash(passHash)
 
 	s.log.Info("Owner retrieved successfully by id",
-		slog.Int64("id", owner.Id),
-		slog.String("email", owner.Email),
-		slog.String("login", owner.Login),
+		slog.Int64("id", owner.Id()),
+		slog.String("email", owner.Email()),
+		slog.String("login", owner.Login()),
 	)
 
 	return owner, nil
 }
 
-func (s *Storage) getOwnerByLogin(ctx context.Context, login string) (models.Owner, error) {
+func (s *Storage) getOwnerByLogin(ctx context.Context, searchLogin string) (models.Owner, error) {
 	var owner models.Owner
 	query := `
 		SELECT id, email, login, password_hash
 		FROM owners WHERE
 		login=$1
 	`
-	err := s.pool.QueryRow(ctx, query, login).Scan(&owner.Id, &owner.Email, &owner.Login, &owner.PassHash)
+	// The costs of using getters and setters
+	var id int64
+	var email, login string
+	var passHash []byte
+
+	err := s.pool.QueryRow(ctx, query, searchLogin).Scan(&id, &email, &login, &passHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Owner{}, fmt.Errorf("%w with login %s", storage.ErrOwnerNotFound, login)
+			return models.Owner{}, fmt.Errorf("%w with login %s", storage.ErrOwnerNotFound, searchLogin)
 		}
 		return models.Owner{}, fmt.Errorf("failed to get owner by login: %w", err)
 	}
+	_ = owner.SetId(id)
+	_ = owner.SetEmail(email)
+	_ = owner.SetLogin(login)
+	owner.SetPassHash(passHash)
 
 	s.log.Info("Owner retrieved successfully by login",
-		slog.Int64("id", owner.Id),
-		slog.String("email", owner.Email),
-		slog.String("login", owner.Login),
+		slog.Int64("id", owner.Id()),
+		slog.String("email", owner.Email()),
+		slog.String("login", owner.Login()),
 	)
 
 	return owner, nil
@@ -104,19 +121,19 @@ func (s *Storage) UpdateOwner(ctx context.Context, owner models.Owner) error {
 	args := make([]interface{}, 0)
 	argId := 1
 
-	if owner.Email != "" {
+	if owner.Email() != "" {
 		setClauses = append(setClauses, fmt.Sprintf("email=$%d", argId))
-		args = append(args, owner.Email)
+		args = append(args, owner.Email())
 		argId++
 	}
-	if owner.Login != "" {
+	if owner.Login() != "" {
 		setClauses = append(setClauses, fmt.Sprintf("login=$%d", argId))
-		args = append(args, owner.Login)
+		args = append(args, owner.Login())
 		argId++
 	}
-	if len(owner.PassHash) > 0 {
+	if len(owner.PassHash()) > 0 {
 		setClauses = append(setClauses, fmt.Sprintf("password_hash=$%d", argId))
-		args = append(args, owner.PassHash)
+		args = append(args, owner.PassHash())
 		argId++
 	}
 
@@ -125,7 +142,7 @@ func (s *Storage) UpdateOwner(ctx context.Context, owner models.Owner) error {
         SET %s
         WHERE id=$%d
     `, strings.Join(setClauses, ", "), argId)
-	args = append(args, owner.Id)
+	args = append(args, owner.Id())
 
 	result, err := s.pool.Exec(ctx, query, args...)
 	if err != nil {
@@ -133,10 +150,10 @@ func (s *Storage) UpdateOwner(ctx context.Context, owner models.Owner) error {
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("%w with id %d", storage.ErrOwnerNotFound, owner.Id)
+		return fmt.Errorf("%w with id %d", storage.ErrOwnerNotFound, owner.Id())
 	}
 
-	s.log.Info("Owner updated successfully", "id", owner.Id)
+	s.log.Info("Owner updated successfully", "id", owner.Id())
 
 	return nil
 }

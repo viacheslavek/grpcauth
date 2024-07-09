@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/viacheslavek/grpcauth/auth/internal/config"
 	"log"
 	"log/slog"
 	"net/url"
@@ -13,6 +12,8 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
+
+	"github.com/viacheslavek/grpcauth/auth/internal/config"
 )
 
 func main() {

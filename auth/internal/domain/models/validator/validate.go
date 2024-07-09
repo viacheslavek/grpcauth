@@ -1,13 +1,18 @@
-package ownerCtl
+package validator
 
 import (
+	"errors"
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
-func validateEmail(email string) error {
+var (
+	ErrEmptyParameter = errors.New("empty parameter")
+)
+
+func ValidateEmail(email string) error {
 	return validation.Validate(
 		email,
 		validation.Required,
@@ -15,7 +20,7 @@ func validateEmail(email string) error {
 	)
 }
 
-func validatePassword(password string) error {
+func ValidatePassword(password string) error {
 	return validation.Validate(
 		password,
 		validation.Required,
@@ -25,7 +30,7 @@ func validatePassword(password string) error {
 	)
 }
 
-func validateLogin(login string) error {
+func ValidateLogin(login string) error {
 	return validation.Validate(
 		login,
 		validation.Required,

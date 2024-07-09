@@ -13,9 +13,9 @@ func NewToken(owner models.Owner, duration time.Duration) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
-	claims["uid"] = owner.Id
-	claims["email"] = owner.Email
-	claims["login"] = owner.Login
+	claims["uid"] = owner.Id()
+	claims["email"] = owner.Email()
+	claims["login"] = owner.Login()
 	claims["exp"] = time.Now().Add(duration).Unix()
 
 	secret := os.Getenv("JWT_SECRET")

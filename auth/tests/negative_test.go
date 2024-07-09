@@ -83,7 +83,7 @@ func TestGetOwner_Failures(t *testing.T) {
 	s := suite.New(t)
 
 	// Try getting a non-existent owner
-	login := "non_existent_login_for_test"
+	login := "nonExistentLoginForTest"
 
 	_, err := s.OwnerClient.GetOwner(s.Ctx, &authv1.GetOwnerRequest{
 		Login: login,

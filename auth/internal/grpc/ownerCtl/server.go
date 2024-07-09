@@ -3,6 +3,7 @@ package ownerCtl
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	authv1 "github.com/viacheslavek/grpcauth/api/gen/go/auth"
@@ -11,12 +12,13 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/viacheslavek/grpcauth/auth/internal/domain/models"
+	"github.com/viacheslavek/grpcauth/auth/internal/domain/models/validator"
 	"github.com/viacheslavek/grpcauth/auth/internal/lib/logger/sl"
 	"github.com/viacheslavek/grpcauth/auth/internal/services/ownerCtl"
 	"github.com/viacheslavek/grpcauth/auth/internal/storage"
 )
 
-type Auth interface {
+type OwnerCtl interface {
 	CreateOwner(ctx context.Context, owner models.Owner) error
 	UpdateOwner(ctx context.Context, owner models.Owner) error
 	DeleteOwner(ctx context.Context, owner models.Owner) error
@@ -27,43 +29,34 @@ type Auth interface {
 
 type serverAPI struct {
 	authv1.UnimplementedOwnerControllerServer
-	auth Auth
+	octl OwnerCtl
 	lg   *slog.Logger
 }
 
-func Register(gRPC *grpc.Server, auth Auth, lg *slog.Logger) {
-	authv1.RegisterOwnerControllerServer(gRPC, &serverAPI{auth: auth, lg: lg})
+func Register(gRPC *grpc.Server, octl OwnerCtl, lg *slog.Logger) {
+	authv1.RegisterOwnerControllerServer(gRPC, &serverAPI{octl: octl, lg: lg})
 }
-
-const emptyId = 0
 
 // CreateOwner Creates a user in the table by email, login, and password
 func (s *serverAPI) CreateOwner(
 	ctx context.Context, req *authv1.CreateOwnerRequest,
 ) (*authv1.Response, error) {
+	const op = "auth.CreateOwner"
 
-	if err := validateEmail(req.GetEmail()); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+	o := models.Owner{}
+	if err := o.SetEmail(req.GetEmail()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set email %v", op, err))
+	}
+	if err := o.SetLogin(req.GetLogin()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set login %v", op, err))
+	}
+	if err := o.SetPassword(req.GetPassword()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set password %v", op, err))
 	}
 
-	if err := validateLogin(req.GetLogin()); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	if err := validatePassword(req.GetPassword()); err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	if err := s.auth.CreateOwner(
-		ctx,
-		*models.NewOwner(
-			models.WithEmail(req.GetEmail()),
-			models.WithLogin(req.GetLogin()),
-			models.WithPassword(req.GetPassword()),
-		),
-	); err != nil {
+	if err := s.octl.CreateOwner(ctx, o); err != nil {
 		s.lg.With(
-			slog.String("op", "auth.CreateOwner"),
+			slog.String("op", op),
 		).Error("failed to create owner", sl.Err(err))
 
 		if errors.Is(err, storage.ErrOwnerExists) {
@@ -80,38 +73,26 @@ func (s *serverAPI) CreateOwner(
 func (s *serverAPI) UpdateOwner(
 	ctx context.Context, req *authv1.UpdateOwnerRequest,
 ) (*authv1.Response, error) {
+	const op = "auth.UpdateOwner"
 
-	if req.GetId() == emptyId {
-		return nil, status.Error(codes.InvalidArgument, "empty id")
+	o := models.Owner{}
+	if err := o.SetId(req.GetId()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set id %v", op, err))
 	}
 
-	if req.GetEmail() == "" && req.GetLogin() == "" && req.GetPassword() == "" {
-		return nil, status.Error(codes.InvalidArgument, "all update params is empty")
+	if err := o.SetEmail(req.GetEmail()); err != nil && !errors.Is(err, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set email %v", op, err))
+	}
+	if err := o.SetLogin(req.GetLogin()); err != nil && !errors.Is(err, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set login %v", op, err))
+	}
+	if err := o.SetPassword(req.GetPassword()); err != nil && !errors.Is(err, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set password %v", op, err))
 	}
 
-	if req.GetEmail() != "" && validateEmail(req.GetEmail()) != nil {
-		return nil, status.Error(codes.InvalidArgument, validateEmail(req.GetEmail()).Error())
-	}
-
-	if req.GetLogin() != "" && validateLogin(req.GetLogin()) != nil {
-		return nil, status.Error(codes.InvalidArgument, validateLogin(req.GetLogin()).Error())
-	}
-
-	if req.GetPassword() != "" && validatePassword(req.GetPassword()) != nil {
-		return nil, status.Error(codes.InvalidArgument, validatePassword(req.GetPassword()).Error())
-	}
-
-	if err := s.auth.UpdateOwner(
-		ctx,
-		*models.NewOwner(
-			models.WithId(req.GetId()),
-			models.WithEmail(req.GetEmail()),
-			models.WithLogin(req.GetLogin()),
-			models.WithPassword(req.GetPassword()),
-		),
-	); err != nil {
+	if err := s.octl.UpdateOwner(ctx, o); err != nil {
 		s.lg.With(
-			slog.String("op", "auth.UpdateOwner"),
+			slog.String("op", op),
 		).Error("failed to update owner", sl.Err(err))
 
 		if errors.Is(err, ownerCtl.ErrInvalidCredentials) {
@@ -128,19 +109,25 @@ func (s *serverAPI) UpdateOwner(
 func (s *serverAPI) DeleteOwner(
 	ctx context.Context, req *authv1.DeleteOwnerRequest,
 ) (*authv1.Response, error) {
-	if req.GetId() == emptyId && req.GetLogin() == "" {
-		return nil, status.Error(codes.InvalidArgument, "empty delete parameters")
+	const op = "auth.DeleteOwner"
+
+	o := models.Owner{}
+	errIdVal := o.SetId(req.GetId())
+	errLoginVal := o.SetLogin(req.GetLogin())
+
+	if errors.Is(errIdVal, validator.ErrEmptyParameter) && errors.Is(errLoginVal, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, "empty all delete parameters")
+	}
+	if errIdVal != nil && !errors.Is(errIdVal, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set id %v", op, errIdVal))
+	}
+	if errLoginVal != nil && !errors.Is(errLoginVal, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set login %v", op, errIdVal))
 	}
 
-	if err := s.auth.DeleteOwner(
-		ctx,
-		*models.NewOwner(
-			models.WithId(req.GetId()),
-			models.WithLogin(req.GetLogin()),
-		),
-	); err != nil {
+	if err := s.octl.DeleteOwner(ctx, o); err != nil {
 		s.lg.With(
-			slog.String("op", "auth.DeleteOwner"),
+			slog.String("op", op),
 		).Error("failed to delete owner", sl.Err(err))
 
 		if errors.Is(err, ownerCtl.ErrInvalidCredentials) {
@@ -157,20 +144,26 @@ func (s *serverAPI) DeleteOwner(
 func (s *serverAPI) GetOwner(
 	ctx context.Context, req *authv1.GetOwnerRequest,
 ) (*authv1.Owner, error) {
-	if req.GetId() == emptyId && req.GetLogin() == "" {
-		return nil, status.Error(codes.InvalidArgument, "empty get parameters")
+	const op = "papa auth.GetOwner"
+
+	o := models.Owner{}
+	errIdVal := o.SetId(req.GetId())
+	errLoginVal := o.SetLogin(req.GetLogin())
+
+	if errors.Is(errIdVal, validator.ErrEmptyParameter) && errors.Is(errLoginVal, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, "empty all get parameters")
+	}
+	if errIdVal != nil && !errors.Is(errIdVal, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set id %v", op, errIdVal))
+	}
+	if errLoginVal != nil && !errors.Is(errLoginVal, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set login %v", op, errLoginVal))
 	}
 
-	owner, err := s.auth.GetOwner(
-		ctx,
-		*models.NewOwner(
-			models.WithId(req.GetId()),
-			models.WithLogin(req.GetLogin()),
-		),
-	)
+	owner, err := s.octl.GetOwner(ctx, o)
 	if err != nil {
 		s.lg.With(
-			slog.String("op", "auth.GetOwner"),
+			slog.String("op", op),
 		).Error("failed to get owner", sl.Err(err))
 
 		if errors.Is(err, ownerCtl.ErrInvalidCredentials) {
@@ -181,7 +174,7 @@ func (s *serverAPI) GetOwner(
 	}
 
 	return &authv1.Owner{
-		Id: owner.Id, Email: owner.Email, Login: owner.Login, PasswordHash: string(owner.PassHash),
+		Id: owner.Id(), Email: owner.Email(), Login: owner.Login(), PasswordHash: string(owner.PassHash()),
 	}, nil
 }
 
@@ -189,20 +182,23 @@ func (s *serverAPI) GetOwner(
 func (s *serverAPI) LoginOwner(
 	ctx context.Context, req *authv1.LoginOwnerRequest,
 ) (*authv1.LoginResponse, error) {
-	if req.GetLogin() == "" || req.GetPassword() == "" || req.GetAppId() == emptyId {
-		return nil, status.Error(codes.InvalidArgument, "empty login parameters")
+	const op = "auth.LoginOwner"
+	if req.GetLogin() == "" || req.GetPassword() == "" || req.GetAppId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: empty parameters", op))
 	}
 
-	token, err := s.auth.LoginOwner(
-		ctx,
-		*models.NewOwner(
-			models.WithLogin(req.GetLogin()),
-			models.WithPassword(req.GetPassword()),
-		),
-		int(req.GetAppId()))
+	o := models.Owner{}
+	if err := o.SetLogin(req.GetLogin()); err != nil && !errors.Is(err, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set login %v", op, err))
+	}
+	if err := o.SetPassword(req.GetPassword()); err != nil && !errors.Is(err, validator.ErrEmptyParameter) {
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("%s: failed set password %v", op, err))
+	}
+
+	token, err := s.octl.LoginOwner(ctx, o, int(req.GetAppId()))
 	if err != nil {
 		s.lg.With(
-			slog.String("op", "auth.LoginOwner"),
+			slog.String("op", op),
 		).Error("failed to login owner", sl.Err(err))
 
 		if errors.Is(err, ownerCtl.ErrInvalidCredentials) {

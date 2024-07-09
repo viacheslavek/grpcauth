@@ -34,9 +34,9 @@ func New(
 		panic(err)
 	}
 
-	authService := ownerCtl.New(log, db, db, tokenTTL)
+	ownerService := ownerCtl.New(log, db, db, tokenTTL)
 
-	grpcApp := grpcapp.New(log, authService, grpcPort)
+	grpcApp := grpcapp.New(log, ownerService, grpcPort)
 
 	return &App{
 		GRPCServer: grpcApp,
